@@ -1,5 +1,8 @@
 package com.xgen.interview;
 
+import com.xgen.interview.model.ShopProduct;
+
+import java.math.BigDecimal;
 import java.util.HashMap;
 
 
@@ -7,22 +10,55 @@ import java.util.HashMap;
  * A stub implementation - for this exercise, you may disregard that this is incomplete.
  */
 public class Pricer {
-    HashMap<String, Integer> pricingDatabase = new HashMap<>(); // stub
+    HashMap<ShopProduct, BigDecimal> pricingDatabase = new HashMap<>(); // stub
+    HashMap<String, ShopProduct> itemTypeToShopProductConverter = new HashMap<>();
 
     public Pricer() {
-        pricingDatabase.put("apple", 100);
-        pricingDatabase.put("banana", 200);
+        addProductsToDatabase(new ShopProduct("apple"), new BigDecimal("1.0"));
+        addProductsToDatabase(new ShopProduct("banana"), new BigDecimal("2.0"));
     }
 
-    /**
-     * Returns the price of the item passed, in Euro-cent. Eg. if an item costs €1, this will return 100
-     * If itemType is an unknown string, store policy is that the item is free.
-     */
+    BigDecimal priceIntToBigDecimal(int priceInCents) {
+        return new BigDecimal("0." + priceInCents);
+    }
+
+    int priceBigDecimalToInt(BigDecimal price) {
+        return (int)(price.floatValue() * 100);
+    }
+
+    @Deprecated
+    public void addProductToDatabase(String itemType, int priceInCents) {
+        ShopProduct product = new ShopProduct(itemType);
+        BigDecimal price = new BigDecimal(priceInCents);
+        addProductsToDatabase(product, price);
+    }
+
+    // TODO: replace with proper Exception handling
+    public void addProductsToDatabase(ShopProduct product, BigDecimal price) {
+        if (pricingDatabase.containsKey(product))
+            throw new RuntimeException("This product is already in the DB!");
+        pricingDatabase.put(product, price);
+        itemTypeToShopProductConverter.put(product.itemType, product);
+    }
+
+    @Deprecated
     public Integer getPrice(String itemType) {
-        if (!pricingDatabase.containsKey(itemType)) {
-            return 0;
-        }
-        return pricingDatabase.get(itemType);
+        ShopProduct item = findProduct(itemType);
+        return priceBigDecimalToInt(getPrice(item));
+    }
+
+    public BigDecimal getPrice(ShopProduct product) {
+        return getPrice(product, 1);
+    }
+
+    public BigDecimal getPrice(ShopProduct product, int quantity) {
+        return pricingDatabase.getOrDefault(product, BigDecimal.ZERO).multiply(BigDecimal.valueOf(quantity));
+    }
+
+    public ShopProduct findProduct(String itemType) {
+        if (!itemTypeToShopProductConverter.containsKey(itemType))
+            itemTypeToShopProductConverter.put(itemType, new ShopProduct(itemType));
+        return itemTypeToShopProductConverter.get(itemType);
     }
 
 }

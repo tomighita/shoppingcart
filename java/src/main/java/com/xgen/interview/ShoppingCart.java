@@ -1,6 +1,9 @@
 package com.xgen.interview;
 
+import com.xgen.interview.model.ShopProduct;
+
 import java.lang.reflect.Array;
+import java.math.BigDecimal;
 import java.util.*;
 
 
@@ -9,31 +12,44 @@ import java.util.*;
  * Please write a replacement
  */
 public class ShoppingCart implements IShoppingCart {
-    HashMap<String, Integer> contents = new HashMap<>();
+    class ShoppingCartAddition {
+        public ShoppingCartAddition(int quantity, long timestamp) {
+            this.quantity = quantity;
+            this.itemNumber = timestamp;
+        }
+
+        int quantity;
+        long itemNumber;
+    }
+    HashMap<ShopProduct, ShoppingCartAddition> contents = new HashMap<>();
     Pricer pricer;
+    long itemNumber = 0L;
+    ReceiptFormatter receiptFormatter = new ReceiptFormatter();
+
 
     public ShoppingCart(Pricer pricer) {
         this.pricer = pricer;
     }
 
     public void addItem(String itemType, int number) {
-        if (!contents.containsKey(itemType)) {
-            contents.put(itemType, number);
-        } else {
-            int existing = contents.get(itemType);
-            contents.put(itemType, existing + number);
-        }
+        itemNumber++;
+        ShopProduct product = pricer.findProduct(itemType);
+        ShoppingCartAddition oldValue = contents.getOrDefault(product, new ShoppingCartAddition(0, 0));
+        oldValue.quantity = oldValue.quantity + number;
+        oldValue.itemNumber = itemNumber;
+        contents.put(product, oldValue);
     }
 
     public void printReceipt() {
-        Object[] keys = contents.keySet().toArray();
-
-        for (int i = 0; i < Array.getLength(keys) ; i++) {
-            Integer price = pricer.getPrice((String)keys[i]) * contents.get(keys[i]);
-            Float priceFloat = new Float(new Float(price) / 100);
-            String priceString = String.format("€%.2f", priceFloat);
-
-            System.out.println(keys[i] + " - " + contents.get(keys[i]) + " - " + priceString);
-        }
+        BigDecimal subTotal = BigDecimal.ZERO;
+        subTotal = this.contents.entrySet().stream()
+                .sorted((a,b) -> (int) (a.getValue().itemNumber  - b.getValue().itemNumber))
+                .map(x -> {
+                    BigDecimal price = pricer.getPrice(x.getKey(),x.getValue().quantity);
+                    System.out.println(receiptFormatter.formatItem(x.getKey(),price,x.getValue().quantity));
+                    return price;
+                }).reduce(BigDecimal.ZERO, (total, element) -> total.add(element));
+        String totalString = String.format("€%.2f", subTotal.floatValue());
+        System.out.println("Total - " + totalString);
     }
 }
